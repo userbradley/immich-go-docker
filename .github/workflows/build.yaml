@@ -35,10 +35,12 @@ jobs:
           sparse-checkout: |
            .ko.yaml
           sparse-checkout-cone-mode: false
+          path: immich-go-docker
       - name: Build image (deterministic single build)
         id: build
         env:
           KO_DOCKER_REPO: ghcr.io/userbradley/${{env.IMAGE_NAME}}
+          KO_CONFIG_PATH: immich-go-docker/.ko.yaml
         run: |
           set -euo pipefail
           ko build --bare -t "testing-${{env.TAG}}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none
