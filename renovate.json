@@ -16,7 +16,8 @@
     {
       "matchPackageNames": ["simulot/immich-go"],
       "matchDatasources": ["github-releases"],
-      "automerge": true
+      "automerge": true,
+      "allowedVersions": "< 1.0.0"
     }
   ]
 
