@@ -30,6 +30,11 @@ jobs:
         run: ls
       - name: Setup ko
         uses: ko-build/setup-ko@v0.10
+      - uses: actions/checkout@v7
+        with:
+          sparse-checkout: |
+           .ko.yaml
+          sparse-checkout-cone-mode: false
       - name: Build image (deterministic single build)
         id: build
         env:
