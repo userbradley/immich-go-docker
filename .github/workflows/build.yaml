@@ -48,10 +48,9 @@ jobs:
           set -euo pipefail
           INDEX_DIGEST=$(ko build --bare -t "testing-${{env.TAG}}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none)
 
-
-          ARCH_DIGESTS=$(crane manifest "${IMAGE_REPO}@${INDEX_DIGEST}" | jq -c '[.manifests[].digest]')
+          ARCH_DIGESTS=$(crane manifest "${{ env.KO_DOCKER_REPO }}@${INDEX_DIGEST}" | jq -c '[.manifests[].digest]')
           
-          echo "image=${IMAGE_REPO}" >> "$GITHUB_OUTPUT"
+          echo "image=${{ env.KO_DOCKER_REPO }}" >> "$GITHUB_OUTPUT"
           echo "index_digest=${INDEX_DIGEST}" >> "$GITHUB_OUTPUT"
           echo "arch_digests=${ARCH_DIGESTS}" >> "$GITHUB_OUTPUT"
           echo "tag=testing-${{ env.TAG }}" >> "$GITHUB_OUTPUT"
