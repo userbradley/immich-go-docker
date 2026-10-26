@@ -19,7 +19,6 @@ jobs:
       image: ${{ steps.build.outputs.image }}
       index_digest: ${{ steps.build.outputs.index_digest }}
       arch_digests: ${{ steps.build.outputs.arch_digests }}
-      tag: ${{ steps.build.outputs.tag }}
     steps:
       - name: Checkout Upstream repo
         uses: actions/checkout@v7
@@ -48,7 +47,10 @@ jobs:
         run: |
           set -euo pipefail
           echo "${{ github.token }}" | ko login ghcr.io -u ${{ github.actor }} --password-stdin
-          KO_OUTPUT=$(ko build --bare -t latest -t "${{ github.run_id}}-${{env.TAG}}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none)
+          
+          STRIPPED_TAG="${TAG#v}"
+          
+          KO_OUTPUT=$(ko build --bare -t latest -t "${{ env.TAG }}" -t "${STRIPPED_TAG}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none)
           
           INDEX_DIGEST="${KO_OUTPUT#*@}"
           
@@ -57,7 +59,6 @@ jobs:
           echo "image=${{ env.KO_DOCKER_REPO }}" >> "$GITHUB_OUTPUT"
           echo "index_digest=${INDEX_DIGEST}" >> "$GITHUB_OUTPUT"
           echo "arch_digests=${ARCH_DIGESTS}" >> "$GITHUB_OUTPUT"
-          echo "tag=testing-${{ env.TAG }}" >> "$GITHUB_OUTPUT"
   provenance:
     name: SLSA Provenance
     needs: build
