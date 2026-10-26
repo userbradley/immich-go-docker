@@ -48,7 +48,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "${{ github.token }}" | ko login ghcr.io -u ${{ github.actor }} --password-stdin
-          KO_OUTPUT=$(ko build --bare -t "${{ github.run_id}}-${{env.TAG}}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none)
+          KO_OUTPUT=$(ko build --bare -t latest -t "${{ github.run_id}}-${{env.TAG}}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none)
           
           INDEX_DIGEST="${KO_OUTPUT#*@}"
           
@@ -79,55 +79,44 @@ jobs:
       private-repository: false # Push to the transparency log
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
-#  provenance:
-#    name: SLSA Provenance
-#    needs: build
-#    permissions:
-#      id-token: write
-#      contents: read
-#      actions: read
-#      packages: write
-#    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
-#    with:
-#      image: ${{ needs.build.outputs.image }}
-#      digest: ${{ needs.build.outputs.digest }}
-#      registry-username: ${{ github.actor }}
-#      compile-generator: true
-#      private-repository: true
-#    secrets:
-#      registry-password: ${{ secrets.GITHUB_TOKEN }}
-#  sbom:
-#    name: SBOM Attestation
-#    needs: build
-#    runs-on: ubuntu-latest
-#    permissions:
-#      id-token: write
-#      contents: read
-#      packages: write
-#    steps:
-#      - name: Install cosign
-#        uses: sigstore/cosign-installer@v4.1.2
-#      - name: Login to GHCR
-#        run: echo "${{ secrets.GITHUB_TOKEN }}" | cosign login ghcr.io -u ${{ github.actor }} --password-stdin
-#      - name: Generate SBOM (SPDX)
-#        uses: anchore/sbom-action@v0
-#        with:
-#          image: ${{ needs.build.outputs.image }}@${{ needs.build.outputs.digest }}
-#          format: spdx-json
-#          output-file: sbom.spdx.json
-#          upload-release-assets: false # This would cause the action to fail when run on Release please pipelines
-#          upload-artifact: false # Same as above
-#      - name: Attach SBOM attestation
-#        env:
-#          IMAGE: ${{ needs.build.outputs.image }}
-#          DIGEST: ${{ needs.build.outputs.digest }}
-#        run: |
-#          set -euo pipefail
-#
-#          cosign attest --yes \
-#            --type https://spdx.dev/Document \
-#            --predicate sbom.spdx.json \
-#            "${IMAGE}@${DIGEST}"
+  sbom:
+    name: SBOM Attestation
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        digest: ${{ fromJSON(needs.build.outputs.arch_digests) }}
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.4.0
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | cosign login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ needs.build.outputs.image }}@${{ matrix.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+          upload-release-assets: false
+          upload-artifact: false
+
+      - name: Attach SBOM attestation
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+          DIGEST: ${{ matrix.digest }}
+        run: |
+          set -euo pipefail
+          cosign attest --yes \
+            --type https://spdx.dev/Document \
+            --predicate sbom.spdx.json \
+            "${IMAGE}@${DIGEST}"
+
 #  sign:
 #    name: Cosign Image Signature
 #    needs: build
