@@ -15,8 +15,17 @@ in a repo similar from my fork I made to build an image.
 You can use this locally on Podman/ Docker or in your Kubernetes cluster
 
 ```shell
-
+podman run ghcr.io/userbradley/immich-go-docker
 ```
+
+If you wanted to run `immich-go version` you can do so as below
+
+```shell
+podman run ghcr.io/userbradley/immich-go-docker version
+```
+
+Any of the arguments can be passed as you would usually.
+
 
 <!-- TOC -->
 * [Immich Go CLI, as an OCI Image](#immich-go-cli-as-an-oci-image)

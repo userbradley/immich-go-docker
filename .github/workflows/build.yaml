@@ -50,7 +50,7 @@ jobs:
           
           STRIPPED_TAG="${TAG#v}"
           
-          KO_OUTPUT=$(ko build --bare -t latest -t "${{ env.TAG }}" -t "${STRIPPED_TAG}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none)
+          KO_OUTPUT=$(ko build --bare -t latest -t "${{ env.TAG }}" -t "${STRIPPED_TAG}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --image-label org.opencontainers.image.description="Docker image version of https://github.com/simulot/immich-go" --image-annotation org.opencontainers.image.description="Docker image version of https://github.com/simulot/immich-go" --sbom=none)
           
           INDEX_DIGEST="${KO_OUTPUT#*@}"
           
