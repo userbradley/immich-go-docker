@@ -15,10 +15,11 @@ jobs:
       id-token: write
       contents: read
       packages: write
-#    outputs:
-#      image: ${{ steps.build.outputs.image }}
-#      digest: ${{ steps.build.outputs.digest }}
-#      tag: ${{steps.build.outputs.tag}}
+    outputs:
+      image: ${{ steps.build.outputs.image }}
+      index_digest: ${{ steps.build.outputs.index_digest }}
+      arch_digests: ${{ steps.build.outputs.arch_digests }}
+      tag: ${{ steps.build.outputs.tag }}
     steps:
       - name: Checkout Upstream repo
         uses: actions/checkout@v7
@@ -38,7 +39,7 @@ jobs:
           path: immich-go-docker
       - name: Install crane
         uses: imjasonh/setup-crane@v0.7
-      - name: Build image (deterministic single build)
+      - name: Build image
         id: build
         env:
           KO_DOCKER_REPO: ghcr.io/userbradley/${{env.IMAGE_NAME}}
@@ -57,39 +58,27 @@ jobs:
           echo "index_digest=${INDEX_DIGEST}" >> "$GITHUB_OUTPUT"
           echo "arch_digests=${ARCH_DIGESTS}" >> "$GITHUB_OUTPUT"
           echo "tag=testing-${{ env.TAG }}" >> "$GITHUB_OUTPUT"
-
-# TRANSPARENCY: The below commented out is the desired CI that I've pinched from an internal repo of mine
-# to make my life easier waiting the CI.
-#      - name: Install cosign
-#        uses: sigstore/cosign-installer@v4.1.2
-#      - name: Install crane
-#        uses: imjasonh/setup-crane@v0.7
-#      - name: Setup ko
-#        uses: ko-build/setup-ko@v0.10
-#      - name: Build image (deterministic single build)
-#        id: build
-#        working-directory: ${{env.DIR}}
-#        env:
-#          KO_DOCKER_REPO: ghcr.io/userbradley/${{env.IMAGE_NAME}}
-#        run: |
-#          set -euo pipefail
-#
-#          IMAGE_TAG="${GITHUB_REF_NAME#${{env.IMAGE_NAME}}-v}"
-#
-#          ko build --bare -t "${IMAGE_TAG}" --sbom=none
-#
-#          IMAGE="ghcr.io/userbradley/${{env.IMAGE_NAME}}"
-#          DIGEST=$(crane digest "${IMAGE}:${IMAGE_TAG}")
-#
-#          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
-#          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
-#          echo "tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
-#
-#          echo "Built: ${IMAGE}@${DIGEST}"
-#      - name: Validate digest format
-#        run: |
-#          set -euo pipefail
-#          echo "${{ steps.build.outputs.digest }}" | grep -E '^sha256:[a-f0-9]{64}$'
+  provenance:
+    name: SLSA Provenance
+    needs: build
+    permissions:
+      id-token: write
+      contents: read
+      actions: read
+      packages: write
+    strategy:
+      matrix:
+        # Loop over each architecture's digest
+        digest: ${{ fromJSON(needs.build.outputs.arch_digests) }}
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      image: ${{ needs.build.outputs.image }}
+      digest: ${{ matrix.digest }}
+      registry-username: ${{ github.actor }}
+      compile-generator: false # Speeds up workflow by around 2min
+      private-repository: false # Push to the transparency log
+    secrets:
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
 #  provenance:
 #    name: SLSA Provenance
 #    needs: build
