@@ -46,7 +46,7 @@ jobs:
         # Something we're doing below is using KO to get the index manifest, and then we sign it all
         run: |
           set -euo pipefail
-          INDEX_DIGEST=$(ko build --bare -t "testing-${{env.TAG}}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none)
+          INDEX_DIGEST=$(ko build --bare -t "${{ github.run_id}}-${{env.TAG}}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none)
 
           ARCH_DIGESTS=$(crane manifest "${{ env.KO_DOCKER_REPO }}@${INDEX_DIGEST}" | jq -c '[.manifests[].digest]')
           
