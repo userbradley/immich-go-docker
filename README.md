@@ -38,3 +38,9 @@ When a tag is released, the CI will git clone that repo, create a `.go.yaml` fil
 
 Eventually I will backdate all the tags releases meaning you've got access to all upstream versions. In the meantime
 only the latest version (which is `v0.32.0` at time of writing (2026-10-26))
+
+### Is there any AI usage on this repo?
+
+No. I lovingly handcrafted this repo. In my mind, it's rude to get a clanker to write CI for a project someone lovingly 
+handcrafted themselves. 
+

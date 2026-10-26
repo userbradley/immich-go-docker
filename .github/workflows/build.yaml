@@ -36,14 +36,25 @@ jobs:
            .ko.yaml
           sparse-checkout-cone-mode: false
           path: immich-go-docker
+      - name: Install crane
+        uses: imjasonh/setup-crane@v0.7
       - name: Build image (deterministic single build)
         id: build
         env:
           KO_DOCKER_REPO: ghcr.io/userbradley/${{env.IMAGE_NAME}}
           KO_CONFIG_PATH: immich-go-docker/.ko.yaml
+        # Something we're doing below is using KO to get the index manifest, and then we sign it all
         run: |
           set -euo pipefail
-          ko build --bare -t "testing-${{env.TAG}}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none
+          INDEX_DIGEST=$(ko build --bare -t "testing-${{env.TAG}}" --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --sbom=none)
+
+
+          ARCH_DIGESTS=$(crane manifest "${IMAGE_REPO}@${INDEX_DIGEST}" | jq -c '[.manifests[].digest]')
+          
+          echo "image=${IMAGE_REPO}" >> "$GITHUB_OUTPUT"
+          echo "index_digest=${INDEX_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "arch_digests=${ARCH_DIGESTS}" >> "$GITHUB_OUTPUT"
+          echo "tag=testing-${{ env.TAG }}" >> "$GITHUB_OUTPUT"
 
 # TRANSPARENCY: The below commented out is the desired CI that I've pinched from an internal repo of mine
 # to make my life easier waiting the CI.
