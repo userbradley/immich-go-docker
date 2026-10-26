@@ -20,10 +20,10 @@ jobs:
 #      digest: ${{ steps.build.outputs.digest }}
 #      tag: ${{steps.build.outputs.tag}}
     steps:
-      - name: Checkout private tools
+      - name: Checkout Upstream repo
         uses: actions/checkout@v7
         with:
-          repository: simulot/immich-go/tags
+          repository: simulot/immich-go
           ref: ${{ env.TAG }}
       - name: List the files (validate above worked)
         shell: bash
