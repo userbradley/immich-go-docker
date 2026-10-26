@@ -1,0 +1,136 @@
+name: "Build latest version"
+# DESCRIPTION: This CI builds the latest tagged version of Immich-go
+on:
+  push:
+    paths:
+      - .github/workflows/build.yaml # Only to build when this file is changed
+env:
+  TAG: v0.32.0
+  IMAGE_NAME: immich-go-docker
+jobs:
+  build:
+    name: Build Image
+    runs-on: ubuntu-latest
+#    permissions:
+#      id-token: write
+#      contents: read
+#      packages: write
+#    outputs:
+#      image: ${{ steps.build.outputs.image }}
+#      digest: ${{ steps.build.outputs.digest }}
+#      tag: ${{steps.build.outputs.tag}}
+    steps:
+      - name: Checkout private tools
+        uses: actions/checkout@v7
+        with:
+          repository: simulot/immich-go/tags
+          ref: ${{ env.TAG }}
+      - name: List the files (validate above worked)
+        shell: bash
+        run: ls
+
+# TRANSPARENCY: The below commented out is the desired CI that I've pinched from an internal repo of mine
+# to make my life easier waiting the CI.
+#      - name: Checkout repository
+#        uses: actions/checkout@v7
+#        with:
+#          persist-credentials: false
+#      - name: Install cosign
+#        uses: sigstore/cosign-installer@v4.1.2
+#      - name: Install crane
+#        uses: imjasonh/setup-crane@v0.7
+#      - name: Setup ko
+#        uses: ko-build/setup-ko@v0.10
+#      - name: Build image (deterministic single build)
+#        id: build
+#        working-directory: ${{env.DIR}}
+#        env:
+#          KO_DOCKER_REPO: ghcr.io/userbradley/${{env.IMAGE_NAME}}
+#        run: |
+#          set -euo pipefail
+#
+#          IMAGE_TAG="${GITHUB_REF_NAME#${{env.IMAGE_NAME}}-v}"
+#
+#          ko build --bare -t "${IMAGE_TAG}" --sbom=none
+#
+#          IMAGE="ghcr.io/userbradley/${{env.IMAGE_NAME}}"
+#          DIGEST=$(crane digest "${IMAGE}:${IMAGE_TAG}")
+#
+#          echo "image=${IMAGE}" >> "$GITHUB_OUTPUT"
+#          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+#          echo "tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+#
+#          echo "Built: ${IMAGE}@${DIGEST}"
+#      - name: Validate digest format
+#        run: |
+#          set -euo pipefail
+#          echo "${{ steps.build.outputs.digest }}" | grep -E '^sha256:[a-f0-9]{64}$'
+#  provenance:
+#    name: SLSA Provenance
+#    needs: build
+#    permissions:
+#      id-token: write
+#      contents: read
+#      actions: read
+#      packages: write
+#    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+#    with:
+#      image: ${{ needs.build.outputs.image }}
+#      digest: ${{ needs.build.outputs.digest }}
+#      registry-username: ${{ github.actor }}
+#      compile-generator: true
+#      private-repository: true
+#    secrets:
+#      registry-password: ${{ secrets.GITHUB_TOKEN }}
+#  sbom:
+#    name: SBOM Attestation
+#    needs: build
+#    runs-on: ubuntu-latest
+#    permissions:
+#      id-token: write
+#      contents: read
+#      packages: write
+#    steps:
+#      - name: Install cosign
+#        uses: sigstore/cosign-installer@v4.1.2
+#      - name: Login to GHCR
+#        run: echo "${{ secrets.GITHUB_TOKEN }}" | cosign login ghcr.io -u ${{ github.actor }} --password-stdin
+#      - name: Generate SBOM (SPDX)
+#        uses: anchore/sbom-action@v0
+#        with:
+#          image: ${{ needs.build.outputs.image }}@${{ needs.build.outputs.digest }}
+#          format: spdx-json
+#          output-file: sbom.spdx.json
+#          upload-release-assets: false # This would cause the action to fail when run on Release please pipelines
+#          upload-artifact: false # Same as above
+#      - name: Attach SBOM attestation
+#        env:
+#          IMAGE: ${{ needs.build.outputs.image }}
+#          DIGEST: ${{ needs.build.outputs.digest }}
+#        run: |
+#          set -euo pipefail
+#
+#          cosign attest --yes \
+#            --type https://spdx.dev/Document \
+#            --predicate sbom.spdx.json \
+#            "${IMAGE}@${DIGEST}"
+#  sign:
+#    name: Cosign Image Signature
+#    needs: build
+#    runs-on: ubuntu-latest
+#    permissions:
+#      id-token: write
+#      contents: read
+#      packages: write
+#    steps:
+#      - name: Install cosign
+#        uses: sigstore/cosign-installer@v4.1.2
+#      - name: Login to GHCR
+#        run: echo "${{ secrets.GITHUB_TOKEN }}" | cosign login ghcr.io -u ${{ github.actor }} --password-stdin
+#      - name: Sign image (deterministic digest)
+#        env:
+#          IMAGE: ${{ needs.build.outputs.image }}
+#          DIGEST: ${{ needs.build.outputs.digest }}
+#        run: |
+#          set -euo pipefail
+#          cosign sign --yes "${IMAGE}@${DIGEST}"
