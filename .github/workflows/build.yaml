@@ -5,6 +5,7 @@ on:
     paths:
       - .github/workflows/build.yaml # Only to build when this file is changed
 env:
+  # renovate: datasource=github-releases depName=simulot/immich-go
   TAG: v0.32.0
   IMAGE_NAME: immich-go-docker
 jobs:

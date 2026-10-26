@@ -2,5 +2,22 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
     "config:recommended"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "fileMatch": ["^\\.github/workflows/build\\.yaml$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n\\s*TAG:\\s*(?<currentValue>v\\d+\\.\\d+\\.\\d+.*)"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": ["simulot/immich-go"],
+      "matchDatasources": ["github-releases"],
+      "automerge": true
+    }
   ]
+
 }
