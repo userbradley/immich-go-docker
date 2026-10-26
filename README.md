@@ -26,11 +26,20 @@ podman run ghcr.io/userbradley/immich-go-docker version
 
 Any of the arguments can be passed as you would usually.
 
+## Image naming
+
+The images are named with the upstream versin, with and without `v`. Example below
+
+* `ghcr.io/userbradley/immich-go-docker:v0.32.0`
+* `ghcr.io/userbradley/immich-go-docker:0.32.0`
+* `ghcr.io/userbradley/immich-go-docker:latest`
+
 
 <!-- TOC -->
 * [Immich Go CLI, as an OCI Image](#immich-go-cli-as-an-oci-image)
   * [Why this?](#why-this)
   * [How to use](#how-to-use)
+  * [Image naming](#image-naming)
   * [FAQ](#faq)
     * [You talk about OCI, but the repo is named `immich-go-docker`](#you-talk-about-oci-but-the-repo-is-named-immich-go-docker)
     * [How do I know you've not fiddled with the images?](#how-do-i-know-youve-not-fiddled-with-the-images)
@@ -38,9 +47,9 @@ Any of the arguments can be passed as you would usually.
     * [What tags are available?](#what-tags-are-available)
     * [Is there any AI usage on this repo?](#is-there-any-ai-usage-on-this-repo)
   * [Signing, SBOM and SLSA](#signing-sbom-and-slsa)
-    * [Verify image signature](#verify-image-signature)
-    * [Verify SLSA compliance](#verify-slsa-compliance)
-      * [View SLSA Provenance](#view-slsa-provenance)
+    * [Signed images](#signed-images)
+    * [SBOM](#sbom)
+    * [SLSA Compliance & Artifacts](#slsa-compliance--artifacts)
 <!-- TOC -->
 
 ## FAQ
@@ -53,7 +62,8 @@ This is because most people will google `Immich go docker` looking for an image
 
 The CI used to build the images is available in this repo, and images are signed, SBOM'med and SLSA attested.
 
-Older version of the image, 
+Older version of the image, will not be signed or have an SBOM attached. This is purely because it's a lot of work to write the CI
+for, and it does not really add much quality of life improvements
 
 ### How does the CI work
 
@@ -67,7 +77,6 @@ When a tag is released, the CI will git clone that repo, create a `.go.yaml` fil
 Eventually I will backdate all the tags releases meaning you've got access to all upstream versions. In the meantime
 only the latest version (which is `v0.32.0` at time of writing (2026-10-26))
 
-
 ### Is there any AI usage on this repo?
 
 No. I lovingly handcrafted this repo. In my mind, it's rude to get a clanker to write CI for a project someone lovingly 
@@ -75,46 +84,64 @@ handcrafted themselves.
 
 ## Signing, SBOM and SLSA
 
-All images are signed at both the tag, and the individual digests
+The following sections explains how to verify and view the SBOM
 
-This whole section will need to be re-written at some point, as it's a mess.
+All the commands require you to get the `sha` for the image you want to verify.
 
-### Verify image signature
+This can be done with `cosign manifest ghcr.io/userbradley/immich-go-docker`
 
-Let's assume we want to view the signature for 
+### Signed images
 
-### View SBOM for image
+All images built by this pipeline are signed using Sigstore Cosign in keyless mode. The signature is applied recursively, meaning both the multi-arch image index and every individual architecture specific are also signed
 
-Assume we want to view the SBOM for ``
+How to verify the image signature:
 
 ```shell
-cosign verify-attestation ghcr.io/userbradley/immich-go-docker@sha256:c17ca9ad5f871bc86d6272f2e71ab57877a7e97cf6c307b98f74d83a0d66ab36 \
-  --certificate-identity-regexp "https://github.com/.*" \
+cosign verify \
+--certificate-identity-regexp "https://github.com/userbradley/.*" \
+--certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+ghcr.io/userbradley/immich-go-docker@sha256:7af472edd1db5092ae42e1de8b81ad6fb906ad41a37cc5c3ff512b63c7dcb133 
+```
+
+### SBOM
+
+All the images have an SBOM (Software bill of material) attached to them
+
+```shell
+cosign verify-attestation \
+  --certificate-identity-regexp "https://github.com/userbradley/.*" \
   --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  ghcr.io/userbradley/immich-go-docker@sha256:7af472edd1db5092ae42e1de8b81ad6fb906ad41a37cc5c3ff512b63c7dcb133 \
   --type https://spdx.dev/Document | jq -r '.payload | @base64d' | jq
-
-```
-### Verify SLSA compliance
-
-You can view the SLSA details of an image using the below.
-
-Let's assume we want to see if SLSA is present on `ghcr.io/userbradley/immich-go-docker:40312388416-v0.32.0` (Note, this is an example!)
-
-```shell
-crane manifest ghcr.io/userbradley/immich-go-docker:40312388416-v0.32.0 | jq
 ```
 
-You get an output like
+And if we want 
+
+### SLSA Compliance & Artifacts
+
+This project achieves SLSA Level 3 (Supply chain Levels for Software Artifacts) compliance by utilising the official slsa-framework/slsa-github-generator.
+
+
+SLSA Artifacts included:
+
+* Build Provenance (in-toto format) pushed directly to the `Sigstore` transparency log.
+
+Get the manifests and then pick wich one you want to view
 
 ```shell
+crane manifest ghcr.io/userbradley/immich-go-docker:latest | jq
+```
+We will use the `linux/amd64` image in the below example
+
+```json
 {
   "schemaVersion": 2,
   "mediaType": "application/vnd.oci.image.index.v1+json",
   "manifests": [
     {
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
-      "size": 1416,
-      "digest": "sha256:3038daaa8b7816150781f8e5168016ec872b35483ee9d17687a9c777077caacc",
+      "size": 1518,
+      "digest": "sha256:7af472edd1db5092ae42e1de8b81ad6fb906ad41a37cc5c3ff512b63c7dcb133",
       "platform": {
         "architecture": "amd64",
         "os": "linux"
@@ -123,8 +150,8 @@ You get an output like
     },
     {
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
-      "size": 1416,
-      "digest": "sha256:c17ca9ad5f871bc86d6272f2e71ab57877a7e97cf6c307b98f74d83a0d66ab36",
+      "size": 1518,
+      "digest": "sha256:b4052f29bad1103c786521ec3d9c075ebd41c310965a937a6da6b1f2c014220b",
       "platform": {
         "architecture": "arm64",
         "os": "linux"
@@ -133,29 +160,22 @@ You get an output like
     }
   ],
   "annotations": {
-    "org.opencontainers.image.base.digest": "sha256:1144e6830320ccf2d7a607a02d6ffa396fe6bdc7927c47facc8415e767dd6cd3",
-    "org.opencontainers.image.base.name": "cgr.dev/chainguard/static:latest"
+    "org.opencontainers.image.base.digest": "sha256:bb5aaba0ab4dead28db13371528ca6c44e2e0653565c2b71301193efaaf6b969",
+    "org.opencontainers.image.base.name": "cgr.dev/chainguard/static:latest",
+    "org.opencontainers.image.description": "Docker image version of https://github.com/simulot/immich-go"
   }
 }
 ```
 
-If we want to see the SLSA for the `linux/amd64` image we get the `digest`
-
 ```shell
-slsa-verifier verify-image ghcr.io/userbradley/immich-go-docker@sha256:c17ca9ad5f871bc86d6272f2e71ab57877a7e97cf6c307b98f74d83a0d66ab36 --source-uri "github.com/userbradley/immich-go-docker"
+slsa-verifier verify-image ghcr.io/userbradley/immich-go-docker@sha256:b4052f29bad1103c786521ec3d9c075ebd41c310965a937a6da6b1f2c014220b \
+  --source-uri "github.com/userbradley/immich-go-docker"
 ```
 
-This gives an output like
-
-```text
-Verified build using builder "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@refs/tags/v2.1.0" at commit c28217d53172880877d62b4fec3c08c1cb1e77a8
-PASSED: SLSA verification passed
-```
-
-#### View SLSA Provenance
-
-Prepend the `slsa-verifier` command with `--print-provenance | jq`
+If you want to view the provennence file
 
 ```shell
-slsa-verifier verify-image ghcr.io/userbradley/immich-go-docker@sha256:c17ca9ad5f871bc86d6272f2e71ab57877a7e97cf6c307b98f74d83a0d66ab36 --source-uri "github.com/userbradley/immich-go-docker" --print-provenance | jq
+slsa-verifier verify-image ghcr.io/userbradley/immich-go-docker@sha256:b4052f29bad1103c786521ec3d9c075ebd41c310965a937a6da6b1f2c014220b \
+  --source-uri "github.com/userbradley/immich-go-docker" \
+  --print-provenance | jq
 ```
