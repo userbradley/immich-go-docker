@@ -27,6 +27,8 @@ This is because most people will google `Immich go docker` looking for an image
 
 The CI used to build the images is available in this repo, and images are signed, SBOM'med and SLSA attested.
 
+Older version of the image, 
+
 ### How does the CI work
 
 Renovate is installed on this repository, and is set up to watch tags released on [immich-go](https://github.com/simulot/immich-go) 
@@ -38,6 +40,7 @@ When a tag is released, the CI will git clone that repo, create a `.go.yaml` fil
 
 Eventually I will backdate all the tags releases meaning you've got access to all upstream versions. In the meantime
 only the latest version (which is `v0.32.0` at time of writing (2026-10-26))
+
 
 ### Is there any AI usage on this repo?
 
