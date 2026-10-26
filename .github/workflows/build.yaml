@@ -116,24 +116,25 @@ jobs:
             --type https://spdx.dev/Document \
             --predicate sbom.spdx.json \
             "${IMAGE}@${DIGEST}"
+  sign:
+    name: Cosign Image Signature
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+      packages: write
+    steps:
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.4.0
 
-#  sign:
-#    name: Cosign Image Signature
-#    needs: build
-#    runs-on: ubuntu-latest
-#    permissions:
-#      id-token: write
-#      contents: read
-#      packages: write
-#    steps:
-#      - name: Install cosign
-#        uses: sigstore/cosign-installer@v4.1.2
-#      - name: Login to GHCR
-#        run: echo "${{ secrets.GITHUB_TOKEN }}" | cosign login ghcr.io -u ${{ github.actor }} --password-stdin
-#      - name: Sign image (deterministic digest)
-#        env:
-#          IMAGE: ${{ needs.build.outputs.image }}
-#          DIGEST: ${{ needs.build.outputs.digest }}
-#        run: |
-#          set -euo pipefail
-#          cosign sign --yes "${IMAGE}@${DIGEST}"
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | cosign login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Sign image recursively
+        env:
+          IMAGE: ${{ needs.build.outputs.image }}
+          INDEX_DIGEST: ${{ needs.build.outputs.index_digest }}
+        run: |
+          set -euo pipefail
+          cosign sign --yes --recursive "${IMAGE}@${INDEX_DIGEST}"

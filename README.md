@@ -68,10 +68,23 @@ handcrafted themselves.
 
 All images are signed at both the tag, and the individual digests
 
+This whole section will need to be re-written at some point, as it's a mess.
+
 ### Verify image signature
 
-You will need to `crane` command line tool installed, ideally
+Let's assume we want to view the signature for 
 
+### View SBOM for image
+
+Assume we want to view the SBOM for ``
+
+```shell
+cosign verify-attestation ghcr.io/userbradley/immich-go-docker@sha256:c17ca9ad5f871bc86d6272f2e71ab57877a7e97cf6c307b98f74d83a0d66ab36 \
+  --certificate-identity-regexp "https://github.com/.*" \
+  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+  --type https://spdx.dev/Document | jq -r '.payload | @base64d' | jq
+
+```
 ### Verify SLSA compliance
 
 You can view the SLSA details of an image using the below.
