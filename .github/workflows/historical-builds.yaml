@@ -8,6 +8,7 @@ env:
 jobs:
   build:
     strategy:
+      fail-fast: true
       matrix:
         tag:
           - v0.31.0
@@ -173,4 +174,4 @@ jobs:
           set -euo pipefail
           echo "${{ github.token }}" | ko login ghcr.io -u ${{ github.actor }} --password-stdin
           STRIPPED_TAG="${TAG#v}"
-          ko build --bare -t "${{ env.TAG }}" -t "${STRIPPED_TAG}"  --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --image-label org.opencontainers.image.description="Docker image version of https://github.com/simulot/immich-go" --image-annotation org.opencontainers.image.description="Docker image version of https://github.com/simulot/immich-go" --sbom=none)
+          ko build --bare -t "${{ env.TAG }}" -t "${STRIPPED_TAG}"  --image-label org.opencontainers.image.source=https://github.com/userbradley/immich-go-docker --image-label org.opencontainers.image.description="Docker image version of https://github.com/simulot/immich-go" --image-annotation org.opencontainers.image.description="Docker image version of https://github.com/simulot/immich-go" --sbom=none
